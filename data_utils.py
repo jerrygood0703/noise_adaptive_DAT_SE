@@ -18,6 +18,11 @@ def check_dir(path_name):
     if not tf.gfile.Exists(path_name):
         tf.gfile.MkDir(path_name)
 
+def _bytes_feature(value):
+    return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
+def _int64_feature(value):
+  return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
+
 def slice_pad(spec, OVERLAP, seg_size=64, pad_value=0):
     ### Pad spectrogram
     F, T = spec.shape
@@ -99,23 +104,40 @@ class dataPreprocessor(object):
         self.FRAMELENGTH = frame_size
         self.SHIFT = shift
 
+    def get_noise_dict(self, file_list):
+        noise_dict = dict()
+        ntype_list = []
+        ntype = 0
+        for n_ in (tqdm(file_list)):
+            name = n_.split('/')[-3]
+            ### Register new noise type in dict
+            if name not in noise_dict:
+                noise_dict[name] = ntype
+                ntype += 1
+                ntype_list.append(noise_dict[name])
+            else:
+                ntype_list.append(noise_dict[name])
+        print("Num of noise types = %d"%len(noise_dict))
+        return noise_dict, np.array(ntype_list)
+
     def write_tfrecord(self):
         if tf.gfile.Exists(self.record_path):
             print('Folder already exists: {}\n'.format(self.record_path))
         else:
             tf.gfile.MkDir(self.record_path)
 
-        n = np.array([x.split(' ')[0] for x in open(self.noisy_list).readlines()])
-        n_id = np.array([int(x.split(' ')[1]) for x in open(self.noisy_list).readlines()])
+        n_files = np.array([x[:-1] for x in open(self.noisy_list).readlines()])
+        noise_dict, n_id = self.get_noise_dict(n_files)
+        print(noise_dict, np.unique(n_id))
 
         ### Shuffle it first
-        shuffle_id = np.arange(len(n))
+        shuffle_id = np.arange(len(n_files))
         random.shuffle(shuffle_id)
-        n = n[shuffle_id]
+        n_files = n_files[shuffle_id]
         n_id = n_id[shuffle_id]
 
-        source_n = n[n_id<self.target_id]
-        target_n = n[n_id>=self.target_id]
+        source_n = n_files[n_id<self.target_id]
+        target_n = n_files[n_id>=self.target_id]
 
         source_l = n_id[n_id<self.target_id]
         target_l = n_id[n_id>=self.target_id]

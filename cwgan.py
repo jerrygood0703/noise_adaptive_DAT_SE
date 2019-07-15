@@ -16,7 +16,6 @@ class NoiseAdaptiveSE(object):
                 data_sclean, data_snoisy,
                 data_tclean, data_tnoisy,
                 data_slabel, data_tlabel,
-                test_list, clean_root,
                 log_path, model_path,
                 frame_size, NOISETYPES, lamb_domain,
                 model_type,
@@ -25,8 +24,6 @@ class NoiseAdaptiveSE(object):
 
         self.model_path = model_path
         self.log_path = log_path
-        self.test_list = test_list
-        self.clean_root = clean_root
         self.NOISETYPES = NOISETYPES
         self.model_type = model_type
 
@@ -149,11 +146,9 @@ class NoiseAdaptiveSE(object):
 
                     if i % hp.SAVEITER == 0:
                         saver.save(self.sess, save_path + 'model', global_step=i)
-                        self.test(self.test_list, self.clean_root, i, mode='valid')
 
                     if i == iters-1:
                         saver.save(self.sess, save_path + 'model', global_step=i+1)
-                        self.test(self.test_list, self.clean_root, i+1, mode='valid')
                         coord.request_stop()
 
         except tf.errors.OutOfRangeError:
@@ -164,7 +159,7 @@ class NoiseAdaptiveSE(object):
 
         return
 
-    def test(self, test_list=None, clean_root=None, specific_iter=None, mode='test'):
+    def test(self, test_list=None, specific_iter=None, mode='test'):
         FRAMELENGTH = self.frame_size
         OVERLAP = self.frame_size
         test_path = self.model_path
@@ -205,7 +200,6 @@ class NoiseAdaptiveSE(object):
                     continue
                 _pathname = os.path.join(test_path,"enhanced",str(latest_step))
                 check_dir(_pathname)
-                clean_name = os.path.join(clean_root, name.split('/')[-1])
                 ### Read file                   
                 spec, phase, x = make_spectrum(name, is_slice=False, feature_type=hp.feature_type, mode=hp.nfeature_mode)                    
                 spec_length = spec.shape[1]

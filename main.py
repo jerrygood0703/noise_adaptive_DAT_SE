@@ -13,71 +13,74 @@ from cwgan import *
 os.environ['TF_CPP_MIN_LOG_LEVEL']='3'
 tf.set_random_seed(1234)
 
-write_tfrecord = False
-use_waveform = False
-batch_size = 16
-learning_rate = 1e-4
-iters = 100000
-frame_size = 32
-NOISETYPES = 6
-target_id = 5
-lamb_domain = 0.05
-model_type = 'adap' ### base, upper, adap
-mode = sys.argv[1] # train, test
+flags = tf.app.flags
+flags.DEFINE_float("learning_rate", 1e-4, "Learning rate for adam optimizer [1e-4]")
+flags.DEFINE_float("lamb_domain", 0.05, "Lamda of L_DAT [0.05]")
+flags.DEFINE_integer("batch_size", 16, "Batch size [16]")
+flags.DEFINE_integer("iters", 100000, "Total number of training iterations [100k]")
+flags.DEFINE_integer("frame_size", 32, "Frame length [32]")
+flags.DEFINE_integer("NOISETYPES", 6, "Number of noise types for D to predict [6]")
+flags.DEFINE_integer("target_id", 5, "Target domain noise class (0-NOISETYPES) [5]")
+flags.DEFINE_string("model_type", "adap", "Which model to train, [base/upper/adap]")
+flags.DEFINE_string("mode", "train", "Training or testing [train/test]")
+flags.DEFINE_string("ckpt_name", "20190325_temp/", "Checkpoint name.")
+flags.DEFINE_string("root_path", "/mnt/md1/user_sylar/TIMIT_noise_adap/", "Path for directories.")
+flags.DEFINE_string("train_clean_path", "/mnt/md1/user_sylar/TIMIT_SE/Clean/Train", "Path for train clean data.")
+flags.DEFINE_string("train_noisy_list", "/mnt/md1/user_sylar/TIMIT_noise_adap/TrNoisy_feat/tr_cafe_220", "Path for train noisy data.")
+flags.DEFINE_string("test_noisy_list", "/mnt/md1/user_sylar/TIMIT_noise_adap/TsNoisy/ts_noisy", "Path for test noisy data.")
+flags.DEFINE_string("test_iter", "100000", "Specific ckpt iteration for testing [100000]")
+flags.DEFINE_boolean("write_tfrecord", False, "True for making tfrecord, False for nothing [true, false]")
+FLAGS = flags.FLAGS
 
-ckpt_name = 'test/'
-log_path = '/mnt/md1/user_sylar/TIMIT_noise_adap/logs/'+ckpt_name
-model_path = "/mnt/md1/user_sylar/TIMIT_noise_adap/models/"+ckpt_name
+def main(_):
 
-clean_root_dev = "/mnt/md1/user_sylar/TIMIT_SE/Clean/Dev"
-test_list_dev = "/mnt/md1/user_sylar/TIMIT_noise_adap/DevNoisy/dev_cafe"
+    log_path = os.path.join(FLAGS.root_path,'logs',FLAGS.ckpt_name)
+    model_path = os.path.join(FLAGS.root_path,'models',FLAGS.ckpt_name)
+    test_list_ts = FLAGS.test_noisy_list
 
-clean_root_ts = "/mnt/md1/user_sylar/TIMIT_SE/Clean/Test"
-test_list_ts = "/mnt/md1/user_sylar/TIMIT_noise_adap/TsNoisy/ts_noisy"
+    record_path = FLAGS.root_path
+    record_name = "/target_dataset"
+    source_record_name = "/source_dataset"
 
-record_path = "/mnt/md1/user_sylar/TIMIT_noise_adap"
-record_name = "/target_cafe220_lps_32_nonstat_train_exlude_test"
-source_record_name = "/source0-4_lps_32_500x30_stat"
+    print("Mode type:%s lamb_domain:%f log:%s" % (FLAGS.model_type, FLAGS.lamb_domain, log_path))
+    print("record set:%s" % (record_name))
 
-print("Mode type:%s lamb_domain:%f log:%s" % (model_type, lamb_domain, log_path))
-print("record set:%s" % (record_name))
+    G=LSTM_SE(FLAGS.frame_size)
+    C=LSTM_Cls(FLAGS.frame_size, FLAGS.NOISETYPES)
 
-G=LSTM_SE(frame_size)
-C=LSTM_Cls(frame_size, NOISETYPES)
+    check_dir(log_path)
+    check_dir(model_path)
 
-check_dir(log_path)
-check_dir(model_path)
+    reader = dataPreprocessor(record_path, record_name, source_record_name,
+                            target_id=FLAGS.target_id,
+                            noisy_list=FLAGS.train_noisy_list,
+                            clean_path=FLAGS.train_clean_path,
+                            frame_size=FLAGS.frame_size, shift=FLAGS.frame_size)
+    if FLAGS.write_tfrecord:
+        print("Writing tfrecord...")
+        reader.write_tfrecord()
+    s_clean,s_noisy,t_clean,t_noisy,s_label,t_label = reader.read_and_decode(batch_size=FLAGS.batch_size,num_threads=32)
 
-reader = dataPreprocessor(record_path, record_name, source_record_name,
-                        target_id=target_id,
-                        noisy_list="/mnt/md1/user_sylar/TIMIT_noise_adap/TrNoisy/tr_noisy_cafe220",
-                        clean_path="/mnt/md1/user_sylar/TIMIT_SE/Clean/Train",
-                        frame_size=frame_size, shift=frame_size)
-if write_tfrecord:
-    print("Writing tfrecord...")
-    reader.write_tfrecord()
-s_clean,s_noisy,t_clean,t_noisy,s_label,t_label = reader.read_and_decode(batch_size=batch_size,num_threads=32)
+    gan = NoiseAdaptiveSE(
+                            G,C,
+                            s_clean,s_noisy,
+                            t_clean,t_noisy,
+                            s_label,t_label,
+                            log_path,
+                            model_path,
+                            FLAGS.frame_size,
+                            FLAGS.NOISETYPES,
+                            FLAGS.lamb_domain,
+                            FLAGS.model_type,
+                            FLAGS.learning_rate,
+                         )
 
-gan = NoiseAdaptiveSE(
-                        G,C,
-                        s_clean,s_noisy,
-                        t_clean,t_noisy,
-                        s_label,t_label,
-                        test_list_dev,
-                        clean_root_dev,
-                        log_path,
-                        model_path,
-                        frame_size,
-                        NOISETYPES,
-                        lamb_domain,
-                        model_type,
-                        lr=learning_rate,
-                     )
+    if FLAGS.mode == 'test':
+        gan.test(test_list=FLAGS.test_noisy_list,  
+                 specific_iter=int(FLAGS.test_iter), 
+                 mode=FLAGS.mode)
+    elif FLAGS.mode == 'train':
+        gan.train(FLAGS.mode, FLAGS.iters)
 
-if mode == 'test':
-    gan.test(test_list=test_list_ts, 
-             clean_root=clean_root_ts, 
-             specific_iter=int(sys.argv[2]), 
-             mode=mode)
-elif mode == 'train':
-    gan.train(mode, iters)
+if __name__ == '__main__':
+    tf.app.run()
