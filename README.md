@@ -42,12 +42,12 @@ TrNoisy/cafeteria_babble/12dB/FDHC0_SI2189.wav
 
 If you find the code useful in your research, please cite:
     
-@article{liao2018noise,
-  title={Noise adaptive speech enhancement using domain adversarial training},
-  author={Liao, Chien-Feng and Tsao, Yu and Lee, Hung-Yi and Wang, Hsin-Min},
-  journal={arXiv preprint arXiv:1807.07501},
-  year={2018}
-}
+    @article{liao2018noise,
+      title={Noise adaptive speech enhancement using domain adversarial training},
+      author={Liao, Chien-Feng and Tsao, Yu and Lee, Hung-Yi and Wang, Hsin-Min},
+      journal={arXiv preprint arXiv:1807.07501},
+      year={2018}
+    }
     
 ### Contact
 
