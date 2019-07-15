@@ -25,13 +25,13 @@ TrNoisy/cafeteria_babble/12dB/FDHC0_SI2189.wav
       - sample_rate
       - fft points, hop length, window length
     - Check log directory and ckpt name
-    - Make TFrecords for faster data loading:
-      - Run:
+    - For baseline model or  upperbound model, change - -model_type to "base" or  "upper"
+    - Make TFrecords first
+    - Run:
 <pre><code>python main.py --mode train  --model_type adap \
 --ckpt_name temp_exp --write_tfrecord true \
 --train_noisy_list tr_noisy_list.txt \
 --train_clean_path TIMIT/Clean/Train/ </code></pre>
-    - For baseline model or  upperbound model, change - -model_type to "base" or  "upper"
  
 3. Inference:
     - Prepare testing noisy wav list, e.g. ts_noisy_list.txt 
