@@ -4,7 +4,7 @@
 ### Introduction
 This is the original Tensorflow implementation for our [paper](https://arxiv.org/abs/1807.07501).
 
-<img src="imgs/workflow.pdf"/>
+<img src="imgs/workflow.png"/>
 
 ### Dependencies
 * Python 3.6
@@ -13,7 +13,7 @@ This is the original Tensorflow implementation for our [paper](https://arxiv.org
 
 ### Steps and Usages
 1. Data Preprocess:
-    - Prepare noisy wavs directory, e.g. "TrNoisy/.../.../..."
+  - Prepare noisy wavs directory, e.g. "TrNoisy/.../.../..."
     - Prepare clean wavs directory, e.g. "TIMIT/Clean/Train/..."
     - Make noisy wav list, e.g. tr_noisy_list.txt 
 <pre><code>TrNoisy/cafeteria_babble/12dB/FDHC0_SI1559.wav
