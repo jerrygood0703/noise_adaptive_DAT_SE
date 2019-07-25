@@ -2,7 +2,7 @@
 
 
 ### Introduction
-This is the original Tensorflow implementation for our [paper](https://arxiv.org/abs/1807.07501).
+This is the original Tensorflow implementation for our [paper](https://arxiv.org/abs/1807.07501). The enhanced samples can be found in [here](https://jerrygood0703.github.io/demo_noise_adaptive_se/).
 
 <img src="imgs/workflow.png"/>
 
